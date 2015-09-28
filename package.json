@@ -1,0 +1,19 @@
+{
+  "name": "mmr-bot",
+  "version": "1.0.0",
+  "description": "MMR tracking bot for serious WLLG mmr competitition",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/petridw/wllg-mmr-bot.git"
+  },
+  "author": "David Petri <petridw@gmail.com> (davidpetri.com)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/petridw/wllg-mmr-bot/issues"
+  },
+  "homepage": "https://github.com/petridw/wllg-mmr-bot#readme"
+}
