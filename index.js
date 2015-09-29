@@ -1,54 +1,90 @@
 var Steam = require('steam');
+// var SteamUser = require('steam-user');
+var Dota2 = require('dota2');
+
 var config = require('config');
 var fs = require('fs');
-var login = config.get('steam_login');
+var winston = require('winston');
 var readline = require('readline');
 
-var steamClient = new Steam.SteamClient();
-var steamUser = new Steam.SteamUser(steamClient);
+var login = config.get('steam_login');
 
 var rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
 
-var sentryFile;
+var sentryfile;
+if(fs.existsSync('sentryfile.' + login.username + '.hash')) {
+  sentryfile = fs.readFileSync('sentryfile.' + username + '.hash');
+}
 
-steamClient.connect();
-
-steamClient.on('connected', function() {
-  steamUser.logOn({
-    account_name: login.account_name,
-    password: login.password,
-    two_factor_code: login.guard_code
-  });
+var logger = new (winston.Logger)({
+  transports: [
+    new (winston.transports.Console)({
+      colorize: true, 
+      level: 'debug'
+    }),
+    new (winston.transports.File)({
+      level: 'info', 
+      timestamp: true, 
+      filename: 'cratedump.log', 
+      json: false
+    })
+  ]
 });
 
-steamClient.on('logOnResponse', function(res) {
+var client = new Steam.SteamClient();
+// var client = new SteamUser(steam);
+// var steamUser = new SteamUser(client);
+// var steamFriends = new Steam.SteamFriends(steam);
+var dota2 = new Dota2.Dota2Client(client, true);
 
-  if (res.eresult === Steam.EResult.AccountLogonDenied) {
+client.logOn({
+  accountName: login.username, 
+  password: login.password, 
+  shaSentryfile: sentryfile // If null, a new Steam Guard code will be requested
+});
+
+client.on('error', function(e) {
+  // Error code for invalid Steam Guard code
+  if (e.eresult == Steam.EResult.AccountLogonDenied) {
+    // Prompt the user for Steam Gaurd code
     rl.question('Steam Guard Code: ', function(code) {
-      steamUser.logOn({
-        account_name: login.account_name,
+      // Try logging on again
+      client.logOn({
+        accountName: login.username,
         password: login.password,
-        two_factor_code: code
+        authCode: code
       });
     });
+  } else {
+    logger.error('Steam Error: ' + e.eresult);
   }
+});
+
+client.on('sentry', function(sentry) {
+  logger.info('Got new sentry file hash from Steam.  Saving.');
+  fs.writeFile('sentryfile.' + login.username + '.hash', sentry);
+});
+
+client.on('loggedOn', function() {
+  logger.info('Logged on to Steam');
   
-  console.log(res);
+  client.setPersonaName("novlovplovinator"); 
+  client.setPersonaState(Steam.EPersonaState.Online); 
 });
 
-steamClient.on('error', function(err) {
-});
-
-steamClient.on('sentry', function(sentryHash) {
-  console.log('got a sentry');
-  fs.writeFile('sentryfile', sentryHash, function(err) {
-    if(err){
-      console.log(err);
-    } else {
-      console.log('Saved sentry file hash as "sentryfile"');
-    }
-  });
+client.on('webSessionID', function(sessionid) {
+  logger.info('web session');
+  // trade.sessionID = sessionid; // Share the session between libraries
+  // 
+  // client.webLogOn(function(cookie) {
+  //   cookie.forEach(function(part) { // Share the cookie between libraries
+  //     trade.setCookie(part.trim()); // Now we can trade!
+  //   });
+  //   logger.info('Logged into web');
+  //   // No longer appear offline
+  //   client.setPersonaState(steam.EPersonaState.LookingToTrade); 
+  // });
 });
