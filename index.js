@@ -2,40 +2,33 @@ var Steam = require('steam');
 var Dota2 = require('dota2');
 var config = require('config');
 var fs = require('fs');
-var winston = require('winston');
 var readline = require('readline');
-
+var async = require('async');
+var utils = require('./util/helpers');
 
 var client = new Steam.SteamClient();
 var dota2 = new Dota2.Dota2Client(client, true);
+
+var q = async.queue(utils.getMMR);
+q.pause();
 
 var rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
 
+var logger = require('./util/logger');
+
 var login = config.get('steam_login');
 var sentryfile;
-var friends;
 
 if(fs.existsSync('sentryfile.' + login.username + '.hash')) {
   sentryfile = fs.readFileSync('sentryfile.' + login.username + '.hash');
 }
 
-var logger = new (winston.Logger)({
-  transports: [
-    new (winston.transports.Console)({
-      colorize: true, 
-      level: 'debug'
-    }),
-    new (winston.transports.File)({
-      level: 'info', 
-      timestamp: true, 
-      filename: 'cratedump.log', 
-      json: false
-    })
-  ]
-});
+if(fs.existsSync('mmr.txt')) {
+  fs.writeFile('mmr.txt', '');
+}
 
 client.logOn({
   accountName: login.username, 
@@ -68,28 +61,42 @@ client.on('sentry', function(sentry) {
 client.on('loggedOn', function() {
   logger.info('Logged on to Steam');
   
-  client.setPersonaName("novlovplovguy"); 
+  client.setPersonaName("novlovplov"); 
   client.setPersonaState(Steam.EPersonaState.Online);
   dota2.launch();
   
 });
 
-client.on('webSessionID', function(sessionid) {
-  logger.info('friends');
-  
-  friends = Object.keys(client.friends);
+client.on('webSessionID', function(sessionid) {  
+  var friends = Object.keys(client.friends);
     
-  dota2.on('ready', function() {
-    logger.info('GC ready');
-    
-    for (var i = 5; i < friends.length ; i ++) {
-      dota2.profileRequest(dota2.ToAccountID(friends[i]), true);      
-    }
+  friends.forEach(function(friend){
+    q.push({
+      accountId: dota2.ToAccountID(friend),
+      dota2: dota2
+    }, function(err) {
+      if (err) logger.error(err);
+    });
   });
 });
 
+dota2.on('ready', function() {
+  logger.info('GC ready');
+  
+  if (q.paused) {
+    q.resume();
+  }
+  
+});
+
+dota2.on('unready', function() {
+  logger.info('GC not ready');
+    
+  if (!q.paused) {
+    q.pause();
+  }
+});
+
 dota2.on('profileData', function(accountId, profileData) {
-  console.log('***', profileData.playerName, '***');
-  console.log(profileData.gameAccountClient.soloCompetitiveRank);
-  console.log('\n');
+  logger.info('profileData event');
 });

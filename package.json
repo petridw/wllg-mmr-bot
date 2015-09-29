@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/petridw/wllg-mmr-bot#readme",
   "dependencies": {
+    "async": "^1.4.2",
     "config": "^1.16.0",
     "dota2": "^0.7.2",
     "steam": "^0.6.8",
