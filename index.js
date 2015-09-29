@@ -1,22 +1,25 @@
 var Steam = require('steam');
-// var SteamUser = require('steam-user');
 var Dota2 = require('dota2');
-
 var config = require('config');
 var fs = require('fs');
 var winston = require('winston');
 var readline = require('readline');
 
-var login = config.get('steam_login');
+
+var client = new Steam.SteamClient();
+var dota2 = new Dota2.Dota2Client(client, true);
 
 var rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
 
+var login = config.get('steam_login');
 var sentryfile;
+var friends;
+
 if(fs.existsSync('sentryfile.' + login.username + '.hash')) {
-  sentryfile = fs.readFileSync('sentryfile.' + username + '.hash');
+  sentryfile = fs.readFileSync('sentryfile.' + login.username + '.hash');
 }
 
 var logger = new (winston.Logger)({
@@ -33,12 +36,6 @@ var logger = new (winston.Logger)({
     })
   ]
 });
-
-var client = new Steam.SteamClient();
-// var client = new SteamUser(steam);
-// var steamUser = new SteamUser(client);
-// var steamFriends = new Steam.SteamFriends(steam);
-var dota2 = new Dota2.Dota2Client(client, true);
 
 client.logOn({
   accountName: login.username, 
@@ -71,20 +68,28 @@ client.on('sentry', function(sentry) {
 client.on('loggedOn', function() {
   logger.info('Logged on to Steam');
   
-  client.setPersonaName("novlovplovinator"); 
-  client.setPersonaState(Steam.EPersonaState.Online); 
+  client.setPersonaName("novlovplovguy"); 
+  client.setPersonaState(Steam.EPersonaState.Online);
+  dota2.launch();
+  
 });
 
 client.on('webSessionID', function(sessionid) {
-  logger.info('web session');
-  // trade.sessionID = sessionid; // Share the session between libraries
-  // 
-  // client.webLogOn(function(cookie) {
-  //   cookie.forEach(function(part) { // Share the cookie between libraries
-  //     trade.setCookie(part.trim()); // Now we can trade!
-  //   });
-  //   logger.info('Logged into web');
-  //   // No longer appear offline
-  //   client.setPersonaState(steam.EPersonaState.LookingToTrade); 
-  // });
+  logger.info('friends');
+  
+  friends = Object.keys(client.friends);
+    
+  dota2.on('ready', function() {
+    logger.info('GC ready');
+    
+    for (var i = 5; i < friends.length ; i ++) {
+      dota2.profileRequest(dota2.ToAccountID(friends[i]), true);      
+    }
+  });
+});
+
+dota2.on('profileData', function(accountId, profileData) {
+  console.log('***', profileData.playerName, '***');
+  console.log(profileData.gameAccountClient.soloCompetitiveRank);
+  console.log('\n');
 });
