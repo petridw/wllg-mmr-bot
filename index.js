@@ -1,92 +1,96 @@
 var Steam = require('steam');
 var Dota2 = require('dota2');
+var SteamUser = require('steam-user');
 var config = require('config');
-var fs = require('fs');
-var readline = require('readline');
 var async = require('async');
 var utils = require('./util/helpers');
+var fs = require('fs');
 var logger = require('./util/logger');
-var bookshelf = require('./util/bookshelf');
-var client = new Steam.SteamClient();
-var dota2 = new Dota2.Dota2Client(client, true);
 
+var sequelize = require('./util/sequelize');
 
-var q = async.queue(utils.getMMR);
+var Account = require('./util/models/Account');
+var Match = require('./util/models/Match');
+
+Account.sync();
+Match.sync();
+
+// var steamClient = new Steam.SteamClient();
+var client = new SteamUser();
+var dota2 = new Dota2.Dota2Client(client.client, true);
+var steamClient = client.client;
+
+var q = async.queue(utils.getMMR, 5);
 q.pause();
 
-var rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
 var login = config.get('steam_login');
-var sentryfile;
 
-if(fs.existsSync('sentryfile.' + login.username + '.hash')) {
-  sentryfile = fs.readFileSync('sentryfile.' + login.username + '.hash');
+if (fs.existsSync('mmr.txt')) {
+  fs.writeFile('mmr.txt', '');
 }
 
-if(fs.existsSync('mmr.txt')) {
-  fs.writeFile('mmr.txt', '');
+if (fs.existsSync('servers.json')) {
+  servers = fs.readFile('servers.json', 'utf8', function(err, data) {
+    var servers = JSON.parse(data);
+    Steam.servers = servers;
+  });
 }
 
 client.logOn({
   accountName: login.username, 
-  password: login.password, 
-  shaSentryfile: sentryfile // If null, a new Steam Guard code will be requested
+  password: login.password
 });
 
-client.on('error', function(e) {
-  // Error code for invalid Steam Guard code
-  if (e.eresult == Steam.EResult.AccountLogonDenied) {
-    // Prompt the user for Steam Gaurd code
-    rl.question('Steam Guard Code: ', function(code) {
-      // Try logging on again
-      client.logOn({
-        accountName: login.username,
-        password: login.password,
-        authCode: code
-      });
+client.on('error', function(err) {
+  logger.error(err);
+});
+
+client.on('loggedOn', function(details) {
+  logger.info('Logged on to Steam');
+  
+  client.setPersona(Steam.EPersonaState.Online, "novlovplovguy");
+});
+
+client.on('friendMessage', function(senderID, message) {
+  logger.info('received message from ' + senderID);
+  var accountID;
+  
+  // update MMR for steamID in the message
+  try {
+    accountID = dota2.ToAccountID(message);
+
+    q.push({ accountID: accountID, dota2: dota2 }, function(err) {
+      if (err) return logger.error(err);
+      logger.info('finished processing ' + accountID);
     });
-  } else {
-    logger.error('Steam Error: ' + e.eresult);
+  } catch (err) {
+    logger.error(err);
   }
 });
 
-client.on('sentry', function(sentry) {
-  logger.info('Got new sentry file hash from Steam.  Saving.');
-  fs.writeFile('sentryfile.' + login.username + '.hash', sentry);
+client.on('friendRelationship', function(sid, relationship) {
+  logger.info('friend request from ' + sid);
+  if (relationship === Steam.EFriendRelationship.RequestRecipient) {
+    // we got added! add them back!
+    logger.info('adding them back...');
+    client.addFriend(sid);
+  }
 });
 
-client.on('loggedOn', function() {
-  logger.info('Logged on to Steam');
-  
-  client.setPersonaName("novlovplov"); 
-  client.setPersonaState(Steam.EPersonaState.Online);
+steamClient.on('servers', function(newServers) {
   dota2.launch();
   
-});
-
-client.on('webSessionID', function(sessionid) {  
-  var friends = Object.keys(client.friends);
-    
-  friends.forEach(function(friend){
-    q.push({
-      accountId: dota2.ToAccountID(friend),
-      dota2: dota2
-    }, function(err) {
-      if (err) logger.error(err);
-    });
-  });
+  logger.info('servers downloaded');
+  
+  fs.writeFile('servers.json', JSON.stringify(newServers));
 });
 
 dota2.on('ready', function() {
   logger.info('GC ready');
-  
+    
   if (q.paused) {
     q.resume();
   }
-  
 });
 
 dota2.on('unready', function() {
@@ -98,5 +102,5 @@ dota2.on('unready', function() {
 });
 
 dota2.on('profileData', function(accountId, profileData) {
-  logger.info('profileData event');
+  logger.info('profileData');
 });

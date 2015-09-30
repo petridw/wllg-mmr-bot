@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "MMR tracking bot for serious WLLG mmr competitition",
   "engines": {
-    "node": "0.11.16"
+    "node": "4.1.1"
   },
   "main": "index.js",
   "scripts": {
@@ -24,14 +24,16 @@
   "dependencies": {
     "async": "^1.4.2",
     "bluebird": "^2.10.1",
-    "bookshelf": "^0.8.2",
     "config": "^1.16.0",
-    "dota2": "^0.7.2",
-    "knex": "^0.8.6",
+    "dota2": "Crazy-Duck/node-dota2#ba9728bca157b323af3b930452473b8338842174",
     "lodash": "^3.10.1",
     "moment": "^2.10.6",
     "pg": "^4.4.2",
-    "steam": "^0.6.8",
+    "pg-hstore": "^2.3.2",
+    "sequelize": "^3.10.0",
+    "sequelize-cli": "^1.9.1",
+    "steam": "1.1.0",
+    "steam-user": "^1.9.5",
     "winston": "^1.0.2"
   }
 }
