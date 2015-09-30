@@ -3,3 +3,4 @@ config
 sentryfile.*
 cratedump.log
 mmr.txt
+servers.json
