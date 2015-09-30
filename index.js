@@ -5,9 +5,11 @@ var fs = require('fs');
 var readline = require('readline');
 var async = require('async');
 var utils = require('./util/helpers');
-
+var logger = require('./util/logger');
+var bookshelf = require('./util/bookshelf');
 var client = new Steam.SteamClient();
 var dota2 = new Dota2.Dota2Client(client, true);
+
 
 var q = async.queue(utils.getMMR);
 q.pause();
@@ -16,8 +18,6 @@ var rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
-
-var logger = require('./util/logger');
 
 var login = config.get('steam_login');
 var sentryfile;
