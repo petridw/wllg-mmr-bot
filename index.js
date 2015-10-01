@@ -101,7 +101,7 @@ function startCron() {
     var steam_queue = new async.queue(matchHistory);
     
     // Check everyone's accounts
-    request('http://localhost:' + config.get('server').port + '/api/accounts', function(err, response, body) {
+    request('http://' + config.get('server').host + ':' + config.get('server').port + '/api/accounts', function(err, response, body) {
       if (err) return logger.error(err);
       if (!body) return logger.error('No account list received');
       
