@@ -4,37 +4,22 @@ var SteamUser = require('steam-user');
 var config = require('config');
 var async = require('async');
 var utils = require('./util/helpers');
-var fs = require('fs');
 var logger = require('./util/logger');
 
-var sequelize = require('./util/sequelize');
-
-var Account = require('./util/models/Account');
-var Match = require('./util/models/Match');
-
-Account.sync();
-Match.sync();
 
 // var steamClient = new Steam.SteamClient();
 var client = new SteamUser();
 var dota2 = new Dota2.Dota2Client(client.client, true);
 var steamClient = client.client;
 
-var q = async.queue(utils.getMMR, 5);
-q.pause();
+console.log(dota2.ToSteamID('76180485'));
+
+// Create queue with concurrency of 1 for looking up profiles
+// Keep queue paused until dota2 'ready' event has fired
+var profile_queue = async.queue(utils.getMMR);
+profile_queue.pause();
 
 var login = config.get('steam_login');
-
-if (fs.existsSync('mmr.txt')) {
-  fs.writeFile('mmr.txt', '');
-}
-
-if (fs.existsSync('servers.json')) {
-  servers = fs.readFile('servers.json', 'utf8', function(err, data) {
-    var servers = JSON.parse(data);
-    Steam.servers = servers;
-  });
-}
 
 client.logOn({
   accountName: login.username, 
@@ -59,7 +44,7 @@ client.on('friendMessage', function(senderID, message) {
   try {
     accountID = dota2.ToAccountID(message);
 
-    q.push({ accountID: accountID, dota2: dota2 }, function(err) {
+    profile_queue.push({ accountID: accountID, dota2: dota2 }, function(err) {
       if (err) return logger.error(err);
       logger.info('finished processing ' + accountID);
     });
@@ -78,26 +63,24 @@ client.on('friendRelationship', function(sid, relationship) {
 });
 
 steamClient.on('servers', function(newServers) {
+  logger.info('servers downloaded, launched dota 2');
+  
   dota2.launch();
-  
-  logger.info('servers downloaded');
-  
-  fs.writeFile('servers.json', JSON.stringify(newServers));
 });
 
 dota2.on('ready', function() {
   logger.info('GC ready');
     
-  if (q.paused) {
-    q.resume();
+  if (profile_queue.paused) {
+    profile_queue.resume();
   }
 });
 
 dota2.on('unready', function() {
   logger.info('GC not ready');
     
-  if (!q.paused) {
-    q.pause();
+  if (!profile_queue.paused) {
+    profile_queue.pause();
   }
 });
 
