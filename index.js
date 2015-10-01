@@ -143,6 +143,7 @@ function matchHistory(account, done) {
     
     logger.info('********* LAST MATCH DETAIL **********');
     logger.info(account.username + ' last played at ' + moment(lastDate).format());
+    logger.info(account.username + ' last updated at ' + moment(account.updatedAt).format());
     
     if (moment(lastDate).isAfter(moment(account.updatedAt))) {
       logger.info('Updating ' + account.username + ' because they have a new match');
