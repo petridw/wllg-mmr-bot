@@ -2,6 +2,8 @@ var helpers = {};
 var logger = require('./logger');
 var request = require('request');
 var port = require('config').get('server').port;
+var host = require('config').get('server').host;
+
 
 helpers.getMMR = function getMMR(task, done) {
   logger.info('sending request for ' + task.accountID);
@@ -22,7 +24,7 @@ helpers.getMMR = function getMMR(task, done) {
     
     // Update Account using API
     var request_options = {
-      url: 'http://localhost:' + port + '/api/accounts',
+      url: 'http://' + host + ':' + port + '/api/accounts',
       method: 'PUT',
       json: true,
       body: updated_account
