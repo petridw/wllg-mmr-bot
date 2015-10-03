@@ -5,7 +5,7 @@ var port = require('config').get('server').port;
 var host = require('config').get('server').host;
 
 
-helpers.getMMR = function getMMR(task, done) {
+helpers.getMMR = function(task, done) {
   logger.info('sending request for ' + task.accountID);
   
   task.dota2.requestProfile(task.accountID, true, function(err, profileData) {
@@ -19,28 +19,32 @@ helpers.getMMR = function getMMR(task, done) {
       accountID: '_' + task.accountID,
       steamID: '_' + task.dota2.ToSteamID(task.accountID),
       username: profileData.player_name,
-      currentMMR: profileData.game_account_client.solo_competitive_rank
+      currentMMR: profileData.game_account_client.solo_competitive_rank, 
+      matchID: task.match.matchID,
+      startTime: task.match.startTime
     };
     
-    // Update Account using API
-    var request_options = {
-      url: 'http://' + host + ':' + port + '/api/accounts',
-      method: 'PUT',
-      json: true,
-      body: updated_account
-    };
-    
-    request(request_options, function(err, res, body) {
-      if (err) {
-        logger.error(err);
-      }
-      logger.info('Received response from API');
-      console.log(body ? 'created new entry' : 'updated entry');
-      return done();
-    });
-        
+    updateAccount(updated_account, done);
   });  
 };
+
+function updateAccount(options, done) {
+  var request_options = {
+    url: 'http://' + host + ':' + port + '/api/accounts',
+    method: 'PUT',
+    json: true,
+    body: options
+  };
+  
+  request(request_options, function(err, res, body) {
+    if (err) {
+      logger.error(err);
+    }
+    logger.info('Received response from API');
+    console.log(body ? 'created new entry' : 'updated entry');
+    return done();
+  });
+}
 
 
 module.exports = helpers;

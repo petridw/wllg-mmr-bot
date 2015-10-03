@@ -94,7 +94,7 @@ dota2.on('profileData', function(accountId, profileData) {
 
 
 function startCron() {
-  var job = new CronJob('00 00,15,30,45 * * * *', function() {
+  var job = new CronJob('00 00,10,20,30,40,50 * * * *', function() {
     logger.info('cron task started');
     
     // create queue with concurrency of 1 so we don't make too many requests to steam at once
@@ -150,7 +150,11 @@ function matchHistory(account, done) {
       
       profile_queue.push({
         accountID: parseInt(account.accountID.substring(1)),
-        dota2: dota2
+        dota2: dota2,
+        match: {
+          matchID: lastMatch.match_id,
+          startTime: lastDate
+        }
       });
     }
     done();
