@@ -19,10 +19,12 @@ helpers.getMMR = function(task, done) {
       accountID: '_' + task.accountID,
       steamID: '_' + task.dota2.ToSteamID(task.accountID),
       username: profileData.player_name,
-      currentMMR: profileData.game_account_client.solo_competitive_rank, 
-      matchID: task.match.matchID,
-      startTime: task.match.startTime
+      currentMMR: profileData.game_account_client.solo_competitive_rank,
+      matchID: '' + task.match.matchID,
+      startTime: '' + task.match.startTime
     };
+    
+    console.log('updating account with this info: ', updated_account);
     
     updateAccount(updated_account, done);
   });  

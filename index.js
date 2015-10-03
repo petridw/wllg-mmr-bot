@@ -40,19 +40,23 @@ client.on('loggedOn', function(details) {
 
 client.on('friendMessage', function(senderID, message) {
   logger.info('received message from ' + senderID);
-  var accountID;
   
   // update MMR for steamID in the message
-  try {
-    accountID = dota2.ToAccountID(message);
+  console.log('manually pushing ' + message + ' to profile queue');
+  var items = message.split(',');
 
-    profile_queue.push({ accountID: accountID, dota2: dota2 }, function(err) {
-      if (err) return logger.error(err);
-      logger.info('finished processing ' + accountID);
-    });
-  } catch (err) {
-    logger.error(err);
-  }
+  profile_queue.push({ 
+    accountID: parseInt(items[0]), 
+    dota2: dota2, 
+    match: { 
+      matchID: items[1],
+      startTime: items[2]
+    }
+  }, function(err) {
+    if (err) return logger.error(err);
+    logger.info('finished processing ' + items[0]);
+  });
+
 });
 
 client.on('friendRelationship', function(sid, relationship) {
@@ -65,7 +69,7 @@ client.on('friendRelationship', function(sid, relationship) {
 });
 
 steamClient.on('servers', function(newServers) {
-  logger.info('servers downloaded, launched dota 2');
+  logger.info('servers downloaded, launching dota 2');
   
   dota2.launch();
 });
@@ -141,11 +145,7 @@ function matchHistory(account, done) {
     var lastMatch = body.result.matches[0];
     var lastDate = parseInt(lastMatch.start_time) * 1000;
     
-    logger.info('********* LAST MATCH DETAIL **********');
-    logger.info(account.username + ' last played at ' + moment(lastDate).format());
-    logger.info(account.username + ' last updated at ' + moment(account.updatedAt).format());
-    
-    if (moment(lastDate).isAfter(moment(account.updatedAt))) {
+    if (!account.lastPlayed || moment(lastDate).isAfter(moment(account.lastPlayed))) {
       logger.info('Updating ' + account.username + ' because they have a new match');
       
       profile_queue.push({
