@@ -32,7 +32,7 @@ helpers.getMMR = function(task, done) {
 
 function updateAccount(options, done) {
   var request_options = {
-    url: 'http://' + host + ':' + port + '/api/accounts',
+    url: 'http://' + host + ':' + port + '/api/account',
     method: 'PUT',
     json: true,
     body: options
