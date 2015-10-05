@@ -6,9 +6,10 @@ var async = require('async');
 var utils = require('./util/helpers');
 var logger = require('./util/logger');
 var moment = require('moment');
-
 var CronJob = require('cron').CronJob;
 var request = require('request');
+var Account = require('./util/Account');
+var Match = require('./util/Match');
 
 
 // var steamClient = new Steam.SteamClient();
@@ -81,7 +82,7 @@ dota2.on('ready', function() {
     profile_queue.resume();
   }
   
-  startCron();
+  getAccounts(startCron);
 });
 
 dota2.on('unready', function() {
@@ -96,25 +97,33 @@ dota2.on('profileData', function(accountId, profileData) {
   logger.info('profileData');
 });
 
+function getAccounts(done) {
+  var host = config.get('server').host;
+  var port = config.get('server').port;
+  
+  request('http://' + host + ':' + port + '/api/accounts', function(err, response, body) {
+    if (err) return logger.error(err);
+    if (!body) return logger.error('No account list received');
+    
+    var results = JSON.parse(body);
+    
+    var accounts = results.map(function(account) {
+      return new Account(account);
+    });
+    
+    done(accounts);
+  });
+}
 
-function startCron() {
-  var job = new CronJob('00 00,10,20,30,40,50 * * * *', function() {
+function startCron(accounts) {
+  var job = new CronJob('00,30 * * * * *', function() {
     logger.info('cron task started');
     
     // create queue with concurrency of 1 so we don't make too many requests to steam at once
-    var steam_queue = new async.queue(matchHistory);
+    var match_history_queue = new async.queue(matchHistory);
     
-    // Check everyone's accounts
-    request('http://' + config.get('server').host + ':' + config.get('server').port + '/api/accounts', function(err, response, body) {
-      if (err) return logger.error(err);
-      if (!body) return logger.error('No account list received');
-      
-      var accounts = JSON.parse(body);
-      
-      accounts.forEach(function(account) {
-        steam_queue.push(account);
-      });
-        
+    accounts.forEach(function(account) {
+      match_history_queue.push(account);
     });
     
   }, function() {
@@ -143,20 +152,26 @@ function matchHistory(account, done) {
     }
     
     var lastMatch = body.result.matches[0];
-    var lastDate = parseInt(lastMatch.start_time) * 1000;
     
-    if (!account.lastPlayed || moment(lastDate).isAfter(moment(account.lastPlayed))) {
+    var match = new Match({
+      matchID: lastMatch.match_id,
+      startTime: parseInt(lastMatch.start_time) * 1000,
+      accountID: account.accountID
+    });
+
+    if ( (!account.lastPlayed || moment(parseInt(match.startTime)).isAfter(moment(account.lastPlayed))) &&
+         (lastMatch.lobby_type === 6 || lastMatch.lobby_type === 7) ){
       logger.info('Updating ' + account.username + ' because they have a new match');
       
       profile_queue.push({
-        accountID: parseInt(account.accountID.substring(1)),
+        account: account,
         dota2: dota2,
-        match: {
-          matchID: lastMatch.match_id,
-          startTime: lastDate
-        }
+        match: match
       });
+    } else {
+      
     }
+    
     done();
   });
 }

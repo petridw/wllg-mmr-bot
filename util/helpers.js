@@ -1,52 +1,41 @@
 var helpers = {};
 var logger = require('./logger');
-var request = require('request');
-var port = require('config').get('server').port;
-var host = require('config').get('server').host;
+var Account = require('./Account');
+var Match = require('./Match');
 
-
+// task should have an account and a match
 helpers.getMMR = function(task, done) {
-  logger.info('sending request for ' + task.accountID);
+  logger.info('sending request for ' + task.account.accountID);
+  console.log(task.match);
   
-  task.dota2.requestProfile(task.accountID, true, function(err, profileData) {
-    logger.info('Received profile response');
+  accountIDInt = parseInt(task.account.accountID.substring(1));
+  
+  task.dota2.requestProfile(accountIDInt, true, function(err, profileData) {
 
     if (!profileData || !profileData.game_account_client || !profileData.game_account_client.solo_competitive_rank) return done();
     
-    logger.info('received data for ' + profileData.player_name);
+    var mmrChange = profileData.game_account_client.solo_competitive_rank - task.account.currentMMR;
+    
+    if (!mmrChange) {
+      logger.info('not updating because no MMR change (it was probably a team ranked instead of solo)');
+      return done();
+    }
+    
+    task.match.setProps({ mmrChange: mmrChange });
     
     var updated_account = {
-      accountID: '_' + task.accountID,
-      steamID: '_' + task.dota2.ToSteamID(task.accountID),
+      accountID: task.account.accountID,
+      steamID: task.account.steamID,
       username: profileData.player_name,
       currentMMR: profileData.game_account_client.solo_competitive_rank,
-      matchID: '' + task.match.matchID,
-      startTime: '' + task.match.startTime
+      lastPlayed: task.match.startTime,
+      match: task.match
     };
     
     console.log('updating account with this info: ', updated_account);
-    
-    updateAccount(updated_account, done);
+    task.account.setProps(updated_account);
+    task.account.update(done);
   });  
 };
-
-function updateAccount(options, done) {
-  var request_options = {
-    url: 'http://' + host + ':' + port + '/api/account',
-    method: 'PUT',
-    json: true,
-    body: options
-  };
-  
-  request(request_options, function(err, res, body) {
-    if (err) {
-      logger.error(err);
-    }
-    logger.info('Received response from API');
-    console.log(body ? 'created new entry' : 'updated entry');
-    return done();
-  });
-}
-
 
 module.exports = helpers;
