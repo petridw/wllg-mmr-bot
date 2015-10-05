@@ -116,7 +116,7 @@ function getAccounts(done) {
 }
 
 function startCron(accounts) {
-  var job = new CronJob('00,30 * * * * *', function() {
+  var job = new CronJob('00 00,10,20,30,40,50 * * * *', function() {
     logger.info('cron task started');
     
     // create queue with concurrency of 1 so we don't make too many requests to steam at once
