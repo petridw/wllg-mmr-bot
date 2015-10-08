@@ -12,27 +12,34 @@ helpers.getMMR = function(task, done) {
   
   task.dota2.requestProfile(accountIDInt, true, function(err, profileData) {
 
-    if (!profileData || !profileData.game_account_client || !profileData.game_account_client.solo_competitive_rank) return done();
+    if (!profileData || !profileData.game_account_client || !profileData.game_account_client.solo_competitive_rank) {
+      logger.error('Did not get account mmr back from dota :(');
+      return done();
+    }
     
     var mmrChange = profileData.game_account_client.solo_competitive_rank - task.account.currentMMR;
     
     if (!mmrChange) {
-      logger.info('not updating because no MMR change (it was probably a team ranked instead of solo)');
-      return done();
+      logger.info('no MMR change, updating last played');
+
+      task.account.setProps({
+        accountID: task.account.accountID,
+        lastPlayed: task.match.startTime
+      });
+    } else {
+      task.match.setProps({ mmrChange: mmrChange });
+      
+      task.account.setProps({
+        accountID: task.account.accountID,
+        steamID: task.account.steamID,
+        username: profileData.player_name,
+        currentMMR: profileData.game_account_client.solo_competitive_rank,
+        lastPlayed: task.match.startTime,
+        match: task.match
+      });
     }
-    
-    task.match.setProps({ mmrChange: mmrChange });
-    
-    var updated_account = {
-      accountID: task.account.accountID,
-      steamID: task.account.steamID,
-      username: profileData.player_name,
-      currentMMR: profileData.game_account_client.solo_competitive_rank,
-      lastPlayed: task.match.startTime,
-      match: task.match
-    };
-    
-    console.log('updating account with this info: ', updated_account);
+
+    console.log('updating account with this info: ', task.account);
     task.account.setProps(updated_account);
     task.account.update(done);
   });  
