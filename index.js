@@ -116,7 +116,7 @@ function getAccounts(done) {
 }
 
 function startCron(accounts) {
-  var job = new CronJob('00 00,10,20,30,40,50 * * * *', function() {
+  var job = new CronJob('00,30 * * * * *', function() {
     logger.info('cron task started');
     
     // create queue with concurrency of 1 so we don't make too many requests to steam at once
@@ -147,7 +147,7 @@ function matchHistory(account, done) {
     body = JSON.parse(body);
 
     if (!body || !body.result || !body.result.status) {
-      logger.error('No valid match data received.');
+      logger.error('No valid match data received.', body);
       return done();
     }
     
@@ -159,8 +159,7 @@ function matchHistory(account, done) {
       accountID: account.accountID
     });
 
-    if ( (!account.lastPlayed || moment(parseInt(match.startTime)).isAfter(moment(account.lastPlayed))) &&
-         (lastMatch.lobby_type === 6 || lastMatch.lobby_type === 7) ){
+    if (!account.lastPlayed || moment(parseInt(match.startTime)).isAfter(moment(account.lastPlayed))) {
       logger.info('Updating ' + account.username + ' because they have a new match');
       
       profile_queue.push({
@@ -169,7 +168,12 @@ function matchHistory(account, done) {
         match: match
       });
     } else {
-      
+      if (account.username === "Root Beer Guy") {
+        logger.info('not updating root beer guy');
+        logger.info('lastPlayed', moment(account.lastPlayed).format('MMMM Do YYYY, h:mm:ss a'));
+        logger.info('lastMatch', moment(parseInt(match.startTime)).format('MMMM Do YYYY, h:mm:ss a'));
+        logger.info('matchType', lastMatch.lobby_type);
+      }
     }
     
     done();
