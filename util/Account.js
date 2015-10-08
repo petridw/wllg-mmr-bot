@@ -28,7 +28,8 @@ Account.prototype.update = function(done) {
     accountID: this.accountID,
     steamID: this.steamID,
     username: this.username,
-    currentMMR: this.currentMMR
+    currentMMR: this.currentMMR,
+    lastPlayed: this.lastPlayed
   };
   
   if (this.match) {
