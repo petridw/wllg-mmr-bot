@@ -156,7 +156,8 @@ function matchHistory(account, done) {
     var match = new Match({
       matchID: lastMatch.match_id,
       startTime: parseInt(lastMatch.start_time) * 1000,
-      accountID: account.accountID
+      accountID: account.accountID,
+      hero: getHero(lastMatch.players, account.accountID)
     });
 
     if (!account.lastPlayed || moment(parseInt(match.startTime)).isAfter(moment(account.lastPlayed))) {
@@ -178,4 +179,13 @@ function matchHistory(account, done) {
     
     done();
   });
+}
+
+function getHero(array, accountID) {
+  for (var i = 0; i < array.length; i ++) {
+    if (array[i].account_id === accountID) {
+      return array[i].hero_id;
+    }
+  }
+  return -1;
 }

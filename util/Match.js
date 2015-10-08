@@ -6,6 +6,7 @@ function Match(match) {
   this.startTime = '' + match.startTime;
   this.accountID = '' + match.accountID;
   this.mmrChange = match.mmrChange;
+  this.hero = match.hero;
 }
 
 Match.prototype.setProps = function(newProps) {

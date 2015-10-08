@@ -36,6 +36,7 @@ Account.prototype.update = function(done) {
     update_body.matchID = this.match.matchID;
     update_body.startTime = this.match.startTime;
     update_body.mmrChange = this.match.mmrChange;
+    update_body.hero = this.match.hero;
   }
   
   console.log('sending PUT reqest to API:', update_body);
