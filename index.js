@@ -183,7 +183,7 @@ function matchHistory(account, done) {
 
 function getHero(array, accountID) {
   for (var i = 0; i < array.length; i ++) {
-    if (array[i].account_id === accountID) {
+    if ('_' + array[i].account_id === accountID) {
       return array[i].hero_id;
     }
   }
