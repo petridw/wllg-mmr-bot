@@ -40,7 +40,6 @@ helpers.getMMR = function(task, done) {
     }
 
     console.log('updating account with this info: ', task.account);
-    task.account.setProps(updated_account);
     task.account.update(done);
   });  
 };
