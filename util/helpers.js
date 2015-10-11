@@ -30,7 +30,7 @@ helpers.getMMR = function(task, done) {
       task.match.setProps({ mmrChange: mmrChange });
       
       if (!task.account.steamID) {
-        task.account.steamID = task.dota2.ToSteamID(task.account.accountID);
+        task.account.steamID = '_' + task.dota2.ToSteamID(task.account.accountID.substring(1));
       }
       
       task.account.setProps({
