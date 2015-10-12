@@ -82,12 +82,16 @@ dota2.on('ready', function() {
     profile_queue.resume();
   }
   
-  getAccounts(startCron);
+  async.retry({ times: 5, interval: 1000 }, getAccounts, function(err, results) {
+    if (err) return logger.error('Could not retrieve accounts after 5 attempts. Ensure api is up and running.');
+    startCron(results);
+  });
 });
 
 dota2.on('unready', function() {
   logger.info('GC not ready');
-    
+  
+  // Don't send any requests to dota2 when GC offline
   if (!profile_queue.paused) {
     profile_queue.pause();
   }
@@ -102,8 +106,14 @@ function getAccounts(done) {
   var port = config.get('server').port;
   
   request('http://' + host + ':' + port + '/api/accounts', function(err, response, body) {
-    if (err) return logger.error(err);
-    if (!body) return logger.error('No account list received');
+    if (err) {
+      logger.error(err);
+      return done(err);
+    }
+    if (!body) {
+      logger.error('No account list received');
+      return done(new Error('No account list received.'));
+    }
     
     var results = JSON.parse(body);
     
@@ -111,7 +121,7 @@ function getAccounts(done) {
       return new Account(account);
     });
     
-    done(accounts);
+    done(null, accounts);
   });
 }
 
