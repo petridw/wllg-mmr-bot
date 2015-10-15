@@ -17,10 +17,11 @@ var client = new SteamUser();
 var dota2 = new Dota2.Dota2Client(client.client, true);
 var steamClient = client.client;
 
-// Create queue with concurrency of 1 for looking up profiles
+// Create queues with concurrency of 1 for looking up profiles and match histories
 // Keep queue paused until dota2 'ready' event has fired
 var profile_queue = async.queue(utils.getMMR);
 profile_queue.pause();
+var match_history_queue = async.queue(matchHistory);
 
 var login = config.get('steam_login');
 
@@ -92,10 +93,7 @@ dota2.on('ready', function() {
     profile_queue.resume();
   }
   
-  async.retry({ times: 5, interval: 1000 }, getAccounts, function(err, results) {
-    if (err) return logger.error('Could not retrieve accounts after 5 attempts. Ensure api is up and running.');
-    startCron(results);
-  });
+  startCron();
 });
 
 dota2.on('unready', function() {
@@ -136,16 +134,19 @@ function getAccounts(done) {
   });
 }
 
-function startCron(accounts) {
+function startCron() {
   var job = new CronJob('00 00,10,20,30,40,50 * * * *', function() {
     logger.info('cron task started');
     
-    // create queue with concurrency of 1 so we don't make too many requests to steam at once
-    var match_history_queue = new async.queue(matchHistory);
-    
-    accounts.forEach(function(account) {
-      match_history_queue.push(account);
+    // get accounts
+    async.retry({ times: 5, interval: 1000 }, getAccounts, function(err, accounts) {
+      if (err) return logger.error('Could not retrieve accounts after 5 attempts. Ensure api is up and running.');
+      
+      accounts.forEach(function(account) {
+        match_history_queue.push(account);
+      });
     });
+    
     
   }, function() {
     logger.info('cron task complete at ' + moment());
