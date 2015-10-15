@@ -46,17 +46,27 @@ client.on('friendMessage', function(senderID, message) {
   console.log('manually pushing ' + message + ' to profile queue');
   var items = message.split(',');
 
-  profile_queue.push({ 
-    accountID: parseInt(items[0]), 
-    dota2: dota2, 
-    match: { 
-      matchID: items[1],
-      startTime: items[2]
-    }
-  }, function(err) {
-    if (err) return logger.error(err);
-    logger.info('finished processing ' + items[0]);
-  });
+  if (items.length === 2) {
+    profile_queue.push({ 
+      accountID: parseInt(items[0]), 
+      dota2: dota2, 
+      match: { 
+        matchID: items[1],
+        startTime: items[2]
+      }
+    }, function(err) {
+      if (err) return logger.error(err);
+      logger.info('finished processing ' + items[0]);
+    });
+  } else if (items.length === 1) {
+    console.log(items[0]);
+    profile_queue.push({
+      account: {
+        accountID: items[0]
+      },
+      dota2: dota2
+    });
+  }
 
 });
 
@@ -99,6 +109,7 @@ dota2.on('unready', function() {
 
 dota2.on('profileData', function(accountId, profileData) {
   logger.info('profileData');
+  console.log(dprofileData.latest_matches);
 });
 
 function getAccounts(done) {
