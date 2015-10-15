@@ -143,9 +143,6 @@ function startCron() {
       if (err) return logger.error('Could not retrieve accounts after 5 attempts. Ensure api is up and running.');
       
       accounts.forEach(function(account) {
-        // don't check zach for now
-        if (account.accountID === '_120096232') return;
-        
         match_history_queue.push(account);
       });
     });
