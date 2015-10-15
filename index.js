@@ -109,7 +109,7 @@ dota2.on('unready', function() {
 
 dota2.on('profileData', function(accountId, profileData) {
   logger.info('profileData');
-  console.log(dprofileData.latest_matches);
+  console.log(profileData.latest_matches);
 });
 
 function getAccounts(done) {
