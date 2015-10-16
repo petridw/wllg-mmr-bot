@@ -140,7 +140,7 @@ function startCron() {
     logger.info('cron task started');
     
     // get accounts
-    async.retry({ times: 5, interval: 1000 }, getAccounts, function(err, accounts) {
+    async.retry({ times: 5, interval: 10000 }, getAccounts, function(err, accounts) {
       if (err) return logger.error('Could not retrieve accounts after 5 attempts. Ensure api is up and running.');
       
       accounts.forEach(function(account) {

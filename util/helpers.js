@@ -23,6 +23,11 @@ helpers.getMMR = function(task, done) {
       return done();
     }
     
+    // THE PROBLEM MIGHT BE THAT THE GC GETS THE UPDATED MMR AFTER THE WEB API
+    // IF WE GET HERE AND THE GC DOESN'T KNOW ABOUT THE API CHANGE YET, THEN THE
+    // MATCH WILL BE LOST. NEED TO TRY AGAIN FOR UP TO 5-10 MINUTES OR SO TO GET
+    // THE NEW MMR IF IT WAS A RANKED MATCH (LOBBY TYPE 6 OR 7?)
+    
     var mmrChange = profileData.game_account_client.solo_competitive_rank - task.account.currentMMR;
     
     if (!mmrChange) {
