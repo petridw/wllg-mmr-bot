@@ -116,6 +116,7 @@ function getAccounts(done) {
   
   request('http://' + host + ':' + port + '/api/accounts', function(err, response, body) {
     if (err) {
+      logger.error('Received error when attempting to contact API');
       logger.error(err);
       return done(err);
     }
@@ -135,7 +136,7 @@ function getAccounts(done) {
 }
 
 function startCron() {
-  var job = new CronJob('00 00,10,20,30,40,50 * * * *', function() {
+  var job = new CronJob('00 00,15,30,45 * * * *', function() {
     logger.info('cron task started');
     
     // get accounts
@@ -191,12 +192,7 @@ function matchHistory(account, done) {
         match: match
       });
     } else {
-      if (account.username === "Root Beer Guy") {
-        logger.info('not updating root beer guy');
-        logger.info('lastPlayed', moment(account.lastPlayed).format('MMMM Do YYYY, h:mm:ss a'));
-        logger.info('lastMatch', moment(parseInt(match.startTime)).format('MMMM Do YYYY, h:mm:ss a'));
-        logger.info('matchType', lastMatch.lobby_type);
-      }
+      logger.info('not updating ' + account.username + ', lastMatch: ' + moment(match.startTime).format('YYYY-MM-DD HH:mm:ss') + ', lastPlayed: ' + moment(account.lastPlayed).format('YYYY-MM-DD HH:mm:ss'));
     }
     
     done();

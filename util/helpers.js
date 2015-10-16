@@ -10,10 +10,14 @@ helpers.getMMR = function(task, done) {
   
   accountIDInt = parseInt(task.account.accountID.substring(1));
   
+  
   task.dota2.requestProfile(accountIDInt, true, function(err, profileData) {
     
     if (!task.match) return done();
-
+    if (err) {
+      logger.error('Error getting profile data', err);
+      return done(err);
+    }
     if (!profileData || !profileData.game_account_client || !profileData.game_account_client.solo_competitive_rank) {
       logger.error('Did not get account mmr back from dota :(');
       return done();

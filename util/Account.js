@@ -1,6 +1,7 @@
 var logger = require('./logger');
 var config = require('config');
 var request = require('request');
+var extend = require('lodash/object/extend');
 
 var host = config.get('server').host;
 var port = config.get('server').port;
@@ -17,9 +18,8 @@ function Account(account, match) {
 
 Account.prototype.setProps = function(newProps) {
   if (!newProps) return logger.error('Could not update props, props not provided.');
-  for (var key in newProps) {
-    this[key] = newProps[key];
-  }
+  extend(this, newProps);
+  console.log('extended account', this);
 };
 
 Account.prototype.update = function(done) {
@@ -37,6 +37,9 @@ Account.prototype.update = function(done) {
     update_body.startTime = this.match.startTime;
     update_body.mmrChange = this.match.mmrChange;
     update_body.hero = this.match.hero;
+  } else {
+    logger.info(' UPDATING ACCOUNT ' + this.username + ' WITHOUT A NEW MATCH - IS THIS REALLY WHAT YOU WANT? ');
+    logger.info(new Date());
   }
   
   console.log('sending PUT reqest to API:', update_body);
@@ -50,10 +53,12 @@ Account.prototype.update = function(done) {
   
   request(request_options, function(err, res, body) {
     if (err) {
-      logger.error(err);
+      logger.error('ERRP ERRP ERRP COULDNT UPDATE ACCOUNT', err);
+      return done(err);
     }
     logger.info('Received response from API');
     logger.info(body);
+    extend(this, JSON.parse(body));
     return done();
   });
 };
