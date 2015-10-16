@@ -192,7 +192,7 @@ function matchHistory(account, done) {
         match: match
       });
     } else {
-      logger.info('not updating ' + account.username + ', lastMatch: ' + moment(match.startTime).format('YYYY-MM-DD HH:mm:ss') + ', lastPlayed: ' + moment(account.lastPlayed).format('YYYY-MM-DD HH:mm:ss'));
+      logger.info('not updating ' + account.username + ', lastMatch: ' + moment(parseInt(match.startTime)).format('YYYY-MM-DD HH:mm:ss') + ', lastPlayed: ' + moment(account.lastPlayed).format('YYYY-MM-DD HH:mm:ss'));
     }
     
     done();
