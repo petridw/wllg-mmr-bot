@@ -57,9 +57,8 @@ Account.prototype.update = function(done) {
       return done(err);
     }
     logger.info('Received response from API');
-    logger.info(body);
     extend(this, JSON.parse(body));
-    return done();
+    return done(null, this);
   });
 };
 

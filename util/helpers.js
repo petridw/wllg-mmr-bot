@@ -6,21 +6,31 @@ var Match = require('./Match');
 // task should have an account and a match
 helpers.getMMR = function(task, done) {
   logger.info('sending request for ' + task.account.accountID);
-  console.log(task.match);
   
   accountIDInt = parseInt(task.account.accountID.substring(1));
-  
-  
-  task.dota2.requestProfile(accountIDInt, true, function(err, profileData) {
+
+  task.dota2.requestProfileCard(accountIDInt, function(err, profileData) {
     
-    if (!task.match) return done();
+    console.log('PROFILE CARD?!?!');
+    var stats = profileData.slots.reduce(function(acc, card) {
+      if (card.stat) {
+        return acc.concat(card.stat);
+      }
+      return acc;
+    }, []);
+    stats.forEach(function(stat) {
+      console.log('stat_id: ' + stat.stat_id + '. score: ' + stat.stat_score);
+    });
+    
+    if (!task.match) return done('No match data received. I NEED DA MATCH DATA!!!');
     if (err) {
       logger.error('Error getting profile data', err);
+      logger.info(profileData);
       return done(err);
     }
     if (!profileData || !profileData.game_account_client || !profileData.game_account_client.solo_competitive_rank) {
       logger.error('Did not get account mmr back from dota :(');
-      return done();
+      return done('No mmr data :(');
     }
     
     // THE PROBLEM MIGHT BE THAT THE GC GETS THE UPDATED MMR AFTER THE WEB API
@@ -55,7 +65,11 @@ helpers.getMMR = function(task, done) {
     }
 
     console.log('updating account with this info: ', task.account);
-    task.account.update(done);
+    task.account.update(function(err, account) {
+      if (err) return done(err);
+      logger.info('updated account', account);
+      done(null, account);
+    });
   });  
 };
 

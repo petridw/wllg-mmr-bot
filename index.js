@@ -19,7 +19,16 @@ var steamClient = client.client;
 
 // Create queues with concurrency of 1 for looking up profiles and match histories
 // Keep queue paused until dota2 'ready' event has fired
-var profile_queue = async.queue(utils.getMMR);
+var profile_queue = async.queue(function(task, done){
+  async.retry({ times: 10, interval: 15000 }, utils.getMMR.bind(null, task), function(err, updated_account) {
+    if (err) {
+      logger.error('Couldn\'t retrieve an MMR after 10 tries: ', err);
+      return done('Failure to retrieve MMR');
+    }
+    logger.info('Updated account, here\'s the new info:', updated_account);
+    logger.info(updated_account);
+  });
+});
 profile_queue.pause();
 var match_history_queue = async.queue(matchHistory);
 
@@ -105,9 +114,10 @@ dota2.on('unready', function() {
   }
 });
 
-dota2.on('profileData', function(accountId, profileData) {
-  logger.info('profileData');
-  console.log(profileData);
+dota2.on('profileCardData', function(accountId, profileCardData) {
+  logger.info('profileCardData');
+  console.log(profileCardData);
+  
 });
 
 function getAccounts(done) {
@@ -136,7 +146,7 @@ function getAccounts(done) {
 }
 
 function startCron() {
-  var job = new CronJob('00 00,15,30,45 * * * *', function() {
+  var job = new CronJob('00,30 * * * * *', function() {
     logger.info('cron task started');
     
     // get accounts
