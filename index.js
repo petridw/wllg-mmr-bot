@@ -146,7 +146,7 @@ function getAccounts(done) {
 }
 
 function startCron() {
-  var job = new CronJob('00,30 * * * * *', function() {
+  var job = new CronJob('00 00,10,20,30,40,50 * * * *', function() {
     logger.info('cron task started');
     
     // get accounts
