@@ -27,6 +27,7 @@ var profile_queue = async.queue(function(task, done){
     }
     logger.info('Updated account, here\'s the new info:', updated_account);
     logger.info(updated_account);
+    done();
   });
 });
 profile_queue.pause();

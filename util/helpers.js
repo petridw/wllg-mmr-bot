@@ -10,43 +10,40 @@ helpers.getMMR = function(task, done) {
   accountIDInt = parseInt(task.account.accountID.substring(1));
 
   task.dota2.requestProfileCard(accountIDInt, function(err, profileData) {
+    if (!profileData || !profileData.slots) return done('no profile card returned');
     
-    console.log('PROFILE CARD?!?!');
-    var stats = profileData.slots.reduce(function(acc, card) {
-      if (card.stat) {
-        return acc.concat(card.stat);
+    var soloMMR = profileData.slots.reduce(function(acc, card) {
+      if (card.stat && card.stat.stat_id === 1) {
+        return card.stat.stat_score;
       }
       return acc;
-    }, []);
-    stats.forEach(function(stat) {
-      console.log('stat_id: ' + stat.stat_id + '. score: ' + stat.stat_score);
-    });
-    
+    }, -1);
+                
     if (!task.match) return done('No match data received. I NEED DA MATCH DATA!!!');
+    
     if (err) {
       logger.error('Error getting profile data', err);
       logger.info(profileData);
       return done(err);
     }
-    if (!profileData || !profileData.game_account_client || !profileData.game_account_client.solo_competitive_rank) {
-      logger.error('Did not get account mmr back from dota :(');
-      return done('No mmr data :(');
-    }
+    
+    if (soloMMR === -1) return done('Cannot find MMR for ' + task.account.username + ', ' + task.account.accountID);
     
     // THE PROBLEM MIGHT BE THAT THE GC GETS THE UPDATED MMR AFTER THE WEB API
     // IF WE GET HERE AND THE GC DOESN'T KNOW ABOUT THE API CHANGE YET, THEN THE
     // MATCH WILL BE LOST. NEED TO TRY AGAIN FOR UP TO 5-10 MINUTES OR SO TO GET
     // THE NEW MMR IF IT WAS A RANKED MATCH (LOBBY TYPE 6 OR 7?)
     
-    var mmrChange = profileData.game_account_client.solo_competitive_rank - task.account.currentMMR;
+    var mmrChange = soloMMR - task.account.currentMMR;
     
     if (!mmrChange) {
-      logger.info('no MMR change, updating last played');
+      logger.info('Match found but no MMR change, trying again in a fifteen seconds...');
+      return done('No MMR change detected.');
 
-      task.account.setProps({
-        accountID: task.account.accountID,
-        lastPlayed: task.match.startTime
-      });
+      // task.account.setProps({
+      //   accountID: task.account.accountID,
+      //   lastPlayed: task.match.startTime
+      // });
     } else {
       task.match.setProps({ mmrChange: mmrChange });
       
@@ -58,7 +55,7 @@ helpers.getMMR = function(task, done) {
         accountID: task.account.accountID,
         steamID: task.account.steamID,
         username: profileData.player_name,
-        currentMMR: profileData.game_account_client.solo_competitive_rank,
+        currentMMR: soloMMR,
         lastPlayed: task.match.startTime,
         match: task.match
       });

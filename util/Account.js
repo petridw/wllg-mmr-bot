@@ -56,8 +56,7 @@ Account.prototype.update = function(done) {
       logger.error('ERRP ERRP ERRP COULDNT UPDATE ACCOUNT', err);
       return done(err);
     }
-    logger.info('Received response from API');
-    extend(this, JSON.parse(body));
+
     return done(null, this);
   });
 };
