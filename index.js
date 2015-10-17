@@ -194,8 +194,9 @@ function matchHistory(account, done) {
       hero: getHero(lastMatch.players, account.accountID)
     });
 
-    if (!account.lastPlayed || moment(parseInt(match.startTime)).isAfter(moment(account.lastPlayed))) {
-      logger.info('Updating ' + account.username + ' because they have a new match');
+    if ((!account.lastPlayed || moment(parseInt(match.startTime)).isAfter(moment(account.lastPlayed))) &&
+        lastMatch.lobby_type === 7) {
+      logger.info('Updating ' + account.username + ' because they have a new solo ranked match');
       
       profile_queue.push({
         account: account,
