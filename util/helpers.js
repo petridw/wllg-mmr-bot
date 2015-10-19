@@ -11,14 +11,15 @@ helpers.getMMR = function(task, done) {
 
   task.dota2.requestProfileCard(accountIDInt, function(err, profileData) {
     if (!profileData || !profileData.slots) return done('no profile card returned');
-    
+    console.log(profileData.slots);
     var soloMMR = profileData.slots.reduce(function(acc, card) {
       if (card.stat && card.stat.stat_id === 1) {
         return card.stat.stat_score;
       }
       return acc;
     }, -1);
-                
+    
+    
     if (!task.match) return done('No match data received. I NEED DA MATCH DATA!!!');
     
     if (err) {
@@ -36,30 +37,25 @@ helpers.getMMR = function(task, done) {
     
     var mmrChange = soloMMR - task.account.currentMMR;
     
+    
+    // Should probably retry a bit, but then give up retrying after a while and just update the account
     if (!mmrChange) {
-      logger.info('Match found but no MMR change, trying again in a fifteen seconds...');
-      return done('No MMR change detected.');
-
-      // task.account.setProps({
-      //   accountID: task.account.accountID,
-      //   lastPlayed: task.match.startTime
-      // });
-    } else {
-      task.match.setProps({ mmrChange: mmrChange });
-      
-      if (!task.account.steamID) {
-        task.account.steamID = '_' + task.dota2.ToSteamID(task.account.accountID.substring(1));
-      }
-      
-      task.account.setProps({
-        accountID: task.account.accountID,
-        steamID: task.account.steamID,
-        username: profileData.player_name,
-        currentMMR: soloMMR,
-        lastPlayed: task.match.startTime,
-        match: task.match
-      });
+      logger.info('Match found but no MMR change, adding match anyway to update last played.');
     }
+    task.match.setProps({ mmrChange: mmrChange });
+    
+    if (!task.account.steamID) {
+      task.account.steamID = '_' + task.dota2.ToSteamID(task.account.accountID.substring(1));
+    }
+    
+    task.account.setProps({
+      accountID: task.account.accountID,
+      steamID: task.account.steamID,
+      username: profileData.player_name,
+      currentMMR: soloMMR,
+      lastPlayed: task.match.startTime,
+      match: task.match
+    });
 
     console.log('updating account with this info: ', task.account);
     task.account.update(function(err, account) {
