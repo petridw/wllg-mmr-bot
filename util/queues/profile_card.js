@@ -1,10 +1,10 @@
-var helpers = {};
-var logger = require('./logger');
-var Account = require('./Account');
-var Match = require('./Match');
+var async = require('async');
 
-// task should have an account and a match
-helpers.getMMR = function(task, done) {
+// TODO: Port over to Account / Match objects
+
+var profile_card = async.queue(profile_card);
+
+function profile_card(task, done) {
   logger.info('sending request for ' + task.account.accountID);
   
   accountIDInt = parseInt(task.account.accountID.substring(1));
@@ -64,6 +64,6 @@ helpers.getMMR = function(task, done) {
       done(null, account);
     });
   });  
-};
+}
 
-module.exports = helpers;
+module.exports = profile_card;
