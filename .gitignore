@@ -5,4 +5,4 @@ cratedump.log
 mmr.txt
 servers.json
 .jshintrc
-*.txt
+missedMatches.json
