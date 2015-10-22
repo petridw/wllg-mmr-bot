@@ -106,6 +106,10 @@ Account.prototype.resolveMatches = function(matches) {
   for (var i = 0; i < matches.length; i ++) {
     match = new Match(matches[i]);
     
+    if (this.username === 'yuru') {
+      logger.info(match);
+    }
+    
     if (moment(match.startTime).isAfter(this.lastPlayed)) {
       newMatches.push(match);
     } else {
@@ -123,7 +127,7 @@ Account.prototype.resolveMatches = function(matches) {
                   manually reconciled. See missedMatches.txt`);
                   
     rankedMatches.forEach((match) => {
-      fs.appendFile(__dirname + '../../missedMatches.txt', match, function(err) {
+      fs.appendFile(__dirname + '/../../missedMatches.txt', match, function(err) {
         if (err) throw new Error(err);
       });
     });
@@ -159,18 +163,18 @@ Account.prototype.addMatch = function(match, profileCard) {
   
   if (soloMMR === -1) {
     logger.error('Could not find solo mmr for ' + this.username);
-    fs.appendFile(__dirname + '../../noMMR.txt', this.username + ' - ' + new Date(), function(err) {
+    fs.appendFile(__dirname + '/../../noMMR.txt', this.username + ' - ' + new Date(), function(err) {
       if (err) throw new Error(err);
     });
   } else {
     this.soloMMR = soloMMR;
   }
   
-  var mmrChange = soloMMR - task.account.currentMMR;
+  var mmrChange = soloMMR - this.currentMMR;
   
   if (!mmrChange) {
     logger.info('Ranked match found but no MMR change. Match will need to be manually resolved later.');
-    fs.appendFile(__dirname + '../../missedMatches.txt', match, function(err) {
+    fs.appendFile(__dirname + '/../../missedMatches.txt', match, function(err) {
       if (err) throw new Error(err);
     });
   }
@@ -180,11 +184,12 @@ Account.prototype.addMatch = function(match, profileCard) {
   match.accountID = this.accountID;
   match.save(function(err, res) {
     logger.info(`Added new match ${match.matchID} for ${this.username}`);
-  });
-  
-  this.lastPlayed = match.startTime;
-  this.update(function(err, res) {
-    logger.info(`updated MMR and lastPlayed for ${this.username}`);
+    if (err) throw new Error(err);
+
+    this.lastPlayed = match.startTime;
+    this.update(function(err, res) {
+      logger.info(`updated MMR and lastPlayed for ${this.username}`);
+    });
   });
   
 };
