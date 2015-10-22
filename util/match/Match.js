@@ -13,7 +13,7 @@ function Match(match) {
   this.accountID = null;
 }
 
-Match.prototype.update = function(done) {
+Match.prototype.save = function(done) {
   if (!this.hero || !this.mmrChange || !this.accountID) throw new Error('Cannot update Match without account information!');
   
   var update_body = {
@@ -41,9 +41,10 @@ Match.prototype.update = function(done) {
   });
 };
 
-Match.prototype.getHero = function(accountID) {
+Match.prototype.setHero = function(accountID) {
   for (var i = 0; i < this.players.length; i ++) {
     if ('_' + this.players[i].account_id === accountID) {
+      this.hero = hero_id;
       return hero_id;
     }
   }

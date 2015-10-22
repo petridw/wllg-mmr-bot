@@ -5,21 +5,24 @@ var moment = require('moment');
 var async = require('async');
 var Match = require('../match/Match');
 var fs = require('fs');
+var profile_queue = require('../helpers/getProfileCard');
 
 var steam_key = config.get('steam').api_key;
 
 var host = config.get('server').host;
 var port = config.get('server').port;
 
-function Account(account, next) {
+function Account(account, dota2, profile_card_queue) {
   this.accountID = account.accountID;
   this.steamID = account.steamID;
   this.username = account.username;
   this.currentMMR = account.currentMMR;
   this.lastPlayed = account.lastPlayed;
+  this.dota2 = dota2;
+  this.profile_card_queue = profile_card_queue;
 }
 
-Account.makeAccount = function(account, next) {
+Account.makeAccount = function(dota2, profile_card_queue, account, next) {
   if (!account) throw new Error('Could not create account, valid info not provided.');
   if (typeof account === 'string') {
     // make new account with account id
@@ -28,10 +31,10 @@ Account.makeAccount = function(account, next) {
     Account.getAccountInfo(function(err, result) {
       if (err) throw err;
       logger.info('makeAccount calling done with new Account');
-      return next(null, new Account(result));
+      return next(null, new Account(result, dota2, profile_card_queue));
     });
   } else {
-    return next(null, new Account(account));
+    return next(null, new Account(account, dota2, profile_card_queue));
   }
 };
 
@@ -40,7 +43,7 @@ Account.prototype.setProps = function(newProps) {
   extend(this, newProps);
 };
 
-Account.prototype.updateAPI = function(done) {
+Account.prototype.update = function(done) {
   
   var update_body = {
     accountID: this.accountID,
@@ -58,12 +61,9 @@ Account.prototype.updateAPI = function(done) {
   };
   
   http_request(request_options, function(err, res, body) {
-    if (err) {
-      logger.error('ERRP ERRP ERRP COULDNT UPDATE ACCOUNT', err);
-      return done(err);
-    }
+    if (err) throw new Error(err);
 
-    return done(null, this);
+    return done(null);
   });
 };
 
@@ -101,6 +101,7 @@ Account.prototype.getMatchHistory = function(next) {
 Account.prototype.resolveMatches = function(matches) {
   var match;
   var newMatches = [];
+  var newRankedMatch;
   
   for (var i = 0; i < matches.length; i ++) {
     match = new Match(matches[i]);
@@ -119,18 +120,72 @@ Account.prototype.resolveMatches = function(matches) {
   
   if (rankedMatches.length > 1) {
     logger.error(`More than 1 new ranked matches. MMR changes will need to be
-                  manually reconciled. See missedMatches.json`);
+                  manually reconciled. See missedMatches.txt`);
+                  
     rankedMatches.forEach((match) => {
-      fs.appendFile(__dirname + '../missedMatches.txt', match);
-      
-      // TODO: Now update account with new matches
+      fs.appendFile(__dirname + '../../missedMatches.txt', match, function(err) {
+        if (err) throw new Error(err);
+      });
     });
-  } else if (rankedMatches.length === 1) {
-    // TODO:  Now update account with new match    
+  }
+  
+  if (rankedMatches.length > 0) {
+    newRankedMatch = rankedMatches[0];
+    this.resolveNewRankedMatch(newRankedMatch);
   }
   
   logger.info(`Found ${newMatches.length} new matches and ${rankedMatches.length} ` +
               `new ranked matches for ${this.username}`);
+  
+};
+
+Account.prototype.resolveNewRankedMatch = function(match) {
+  logger.info(`Pushing match ${match.matchID} to queue for ${this.accountID}`);
+  this.profile_card_queue.push({
+    dota2: this.dota2,
+    accountID: this.accountID,
+    success: this.addMatch.bind(this, match)
+  });
+};
+
+Account.prototype.addMatch = function(match, profileCard) {
+  
+  var soloMMR = profileCard.slots.reduce(function(acc, card) {
+    if (card.stat && card.stat.stat_id === 1) {
+      return card.stat.stat_score;
+    }
+    return acc;
+  }, -1);
+  
+  if (soloMMR === -1) {
+    logger.error('Could not find solo mmr for ' + this.username);
+    fs.appendFile(__dirname + '../../noMMR.txt', this.username + ' - ' + new Date(), function(err) {
+      if (err) throw new Error(err);
+    });
+  } else {
+    this.soloMMR = soloMMR;
+  }
+  
+  var mmrChange = soloMMR - task.account.currentMMR;
+  
+  if (!mmrChange) {
+    logger.info('Ranked match found but no MMR change. Match will need to be manually resolved later.');
+    fs.appendFile(__dirname + '../../missedMatches.txt', match, function(err) {
+      if (err) throw new Error(err);
+    });
+  }
+  
+  match.setHero(this.accountID);
+  match.mmrChange = mmrChange;
+  match.accountID = this.accountID;
+  match.save(function(err, res) {
+    logger.info(`Added new match ${match.matchID} for ${this.username}`);
+  });
+  
+  this.lastPlayed = match.startTime;
+  this.update(function(err, res) {
+    logger.info(`updated MMR and lastPlayed for ${this.username}`);
+  });
   
 };
 

@@ -10,15 +10,15 @@ var AccountList = function(accounts) {
   this.accounts = accounts;
 };
 
-AccountList.makeAccountList = function(next) {
-  async.retry({ times: 5, interval: 10000 }, AccountList.getAccountsFromApi, function(err, accounts) {
+AccountList.makeAccountList = function(dota2, profile_card_queue, next) {
+  async.retry({ times: 5, interval: 10000 }, AccountList.getAccountsFromApi.bind(null, dota2, profile_card_queue), function(err, accounts) {
     if (err) throw err;
     
     return next(null, new AccountList(accounts));
   });
 };
 
-AccountList.getAccountsFromApi = function(next) {
+AccountList.getAccountsFromApi = function(dota2, profile_card_queue, next) {
   var url = 'http://' + host + ':' + port + '/api/accounts?matches=false';
   
   http_request(url, function(err, response, body) {
@@ -27,7 +27,7 @@ AccountList.getAccountsFromApi = function(next) {
     
     var results = JSON.parse(body);
     
-    async.map(results, Account.makeAccount, function(err, accounts) {
+    async.map(results, Account.makeAccount.bind(null, dota2, profile_card_queue), function(err, accounts) {
       return next(null, accounts);
     });
     

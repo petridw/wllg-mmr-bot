@@ -7,13 +7,13 @@ var logger = require('./util/logger');
 var once = require('./util/helpers/once');
 var startCron = once(require('./util/cron'));
 var friendEvents = require('./util/events/friends.js');
+var profile_card_queue = async.queue(require('./util/helpers/getProfileCard'));
 
-// var steamClient = new Steam.SteamClient();
 var client = new SteamUser();
 var steamClient = client.client;
 var dota2 = new Dota2.Dota2Client(steamClient, true);
 
-var profile_card_queue = require('./util/queues/profile_card');
+// Keep profile_card_queue paused until Game Coordinator is ready to receive requests
 profile_card_queue.pause();
 
 var login = config.get('steam_login');
@@ -43,20 +43,17 @@ steamClient.on('servers', function(newServers) {
 dota2.on('ready', function() {
   logger.info('GC ready');
     
-  if (profile_card_queue.paused) {
-    profile_card_queue.resume();
-  }
+  if (profile_card_queue.paused) profile_card_queue.resume();
   
-  startCron();
+  startCron(dota2, profile_card_queue);
 });
 
 dota2.on('unready', function() {
   logger.info('GC not ready');
   
   // Don't send any requests to dota2 when GC offline
-  if (!profile_card_queue.paused) {
-    profile_card_queue.pause();
-  }
+  if (!profile_card_queue.paused) profile_card_queue.pause();
+  
 });
 
 dota2.on('profileCardData', function(accountId, profileCardData) {
