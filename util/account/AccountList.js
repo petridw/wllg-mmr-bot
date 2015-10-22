@@ -50,11 +50,11 @@ AccountList.prototype.updateAccounts = function() {
 };
 
 // When calling this be sure to put it in a queue
-AccountList.matchHistory = function(account, done) {  
+AccountList.matchHistory = function(account, next) {  
   account.getMatchHistory(function(err, matches) {
     if (err) return next(err);
     logger.info('Got matches');
-    return done();
+    return next();
   });
 };
 

@@ -38,7 +38,7 @@ Match.prototype.save = function(done) {
   
   http_request(request_options, function(err, res, body) {
     if (err) return done(err);
-    if (res.status !== 200) {
+    if (res.statusCode !== 200) {
       return done('Did not get 200 status back from match save request.');
     }
 

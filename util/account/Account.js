@@ -44,6 +44,7 @@ Account.prototype.setProps = function(newProps) {
 };
 
 Account.prototype.update = function(done) {
+  logger.info(`Updating account ${this.username} with new MMR ${this.currentMMR} and lastPlayed ${this.lastPlayed}`);
   
   var update_body = {
     accountID: this.accountID,
@@ -127,7 +128,7 @@ Account.prototype.resolveMatches = function(matches) {
                   manually reconciled. See missedMatches.txt`);
                   
     rankedMatches.forEach((match) => {
-      fs.appendFile(__dirname + '/../../missedMatches.txt', match, function(err) {
+      fs.appendFile(__dirname + '/../../missedMatches.txt', JSON.stringify(match), function(err) {
         if (err) throw new Error(err);
       });
     });
@@ -166,15 +167,14 @@ Account.prototype.addMatch = function(match, profileCard) {
     fs.appendFile(__dirname + '/../../noMMR.txt', this.username + ' - ' + new Date(), function(err) {
       if (err) throw new Error(err);
     });
-  } else {
-    this.soloMMR = soloMMR;
+    return;
   }
   
   var mmrChange = soloMMR - this.currentMMR;
   
   if (!mmrChange) {
     logger.info('Ranked match found but no MMR change. Match will need to be manually resolved later.');
-    fs.appendFile(__dirname + '/../../missedMatches.txt', match, function(err) {
+    fs.appendFile(__dirname + '/../../missedMatches.txt', JSON.stringify(match), function(err) {
       if (err) throw new Error(err);
     });
   }
@@ -182,12 +182,13 @@ Account.prototype.addMatch = function(match, profileCard) {
   match.setHero(this.accountID);
   match.mmrChange = mmrChange;
   match.accountID = this.accountID;
-  match.save(function(err, res) {
+  match.save((err, res) => {
     logger.info(`Added new match ${match.matchID} for ${this.username}`);
     if (err) throw new Error(err);
 
+    this.currentMMR = soloMMR;
     this.lastPlayed = match.startTime;
-    this.update(function(err, res) {
+    this.update((err, res) => {
       logger.info(`updated MMR and lastPlayed for ${this.username}`);
     });
   });
