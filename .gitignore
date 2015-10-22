@@ -6,3 +6,4 @@ mmr.txt
 servers.json
 .jshintrc
 missedMatches.json
+waitingForMMR.json
