@@ -75,7 +75,7 @@ Account.getAccountInfo = function(accountID, next) {
     if (err) throw err;
     
     var account = JSON.parse(body);
-    console.log('Got account info:');
+    logger.info(`Got account info for ${account.username}`);
     next(null, account);
   });
 };
@@ -107,10 +107,6 @@ Account.prototype.resolveMatches = function(matches) {
   for (var i = 0; i < matches.length; i ++) {
     match = new Match(matches[i]);
     
-    if (this.username === 'yuru') {
-      logger.info(match);
-    }
-    
     if (moment(match.startTime).isAfter(this.lastPlayed)) {
       newMatches.push(match);
     } else {
@@ -125,11 +121,17 @@ Account.prototype.resolveMatches = function(matches) {
   
   if (rankedMatches.length > 1) {
     logger.error(`More than 1 new ranked matches. MMR changes will need to be
-                  manually reconciled. See missedMatches.txt`);
+                  manually reconciled. See missedMatches.json`);
                   
-    rankedMatches.forEach((match) => {
-      fs.appendFile(__dirname + '/../../missedMatches.txt', JSON.stringify(match), function(err) {
-        if (err) throw new Error(err);
+    fs.readFile(__dirname + '/../../missedMatches.json', (err, missedMatches) => {
+      missedMatches = JSON.parse(missedMatches);
+      
+      rankedMatches.forEach((match) => {
+        missedMatches[match.id] = match;
+      });
+
+      fs.writeFile(__dirname + '/../../missedMatches.json', JSON.stringify(missedMatches), function (err) {
+        if (err) throw new Error(err);        
       });
     });
   }
@@ -156,6 +158,7 @@ Account.prototype.resolveNewRankedMatch = function(match) {
 Account.prototype.addMatch = function(match, profileCard) {
   
   var soloMMR = profileCard.slots.reduce(function(acc, card) {
+    console.log(card.stat);
     if (card.stat && card.stat.stat_id === 1) {
       return card.stat.stat_score;
     }
@@ -164,19 +167,25 @@ Account.prototype.addMatch = function(match, profileCard) {
   
   if (soloMMR === -1) {
     logger.error('Could not find solo mmr for ' + this.username);
-    fs.appendFile(__dirname + '/../../noMMR.txt', this.username + ' - ' + new Date(), function(err) {
+    fs.appendFile(__dirname + '/../../noMMR.txt', `${this.username} -  ${new Date()} \n`, function(err) {
       if (err) throw new Error(err);
     });
     return;
   }
   
   var mmrChange = soloMMR - this.currentMMR;
-  
+    logger.info(`${this.username} was ${this.currentMMR} before and is now ${soloMMR}`);
+      
   if (!mmrChange) {
     logger.info('Ranked match found but no MMR change. Match will need to be manually resolved later.');
-    fs.appendFile(__dirname + '/../../missedMatches.txt', JSON.stringify(match), function(err) {
-      if (err) throw new Error(err);
+    fs.readFile(__dirname + '/../../missedMatches.json', function (err, missedMatches) {
+      var loggedMatches = JSON.parse(missedMatches);
+      loggedMatches[match.matchID] = match;
+      fs.writeFile(__dirname + '/../../waitingForMMR.json', JSON.stringify(loggedMatches), function (err) {
+        if (err) throw new Error(err);        
+      });
     });
+    return;
   }
   
   match.setHero(this.accountID);
