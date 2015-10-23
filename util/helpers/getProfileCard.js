@@ -5,6 +5,7 @@ function getProfileCard(task, next) {
   var success = task.success;
   logger.info(`Getting profile card for ${accountID}`);
   dota2.requestProfileCard(parseInt(accountID.substring(1)), function(err, profileCard) {
+    if (err) logger.error(err);
     if (!profileCard || !profileCard.slots) throw new Error('No profile data returned from GC.');
     if (err) throw new Error(err);
     
