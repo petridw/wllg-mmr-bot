@@ -28,7 +28,7 @@ Account.makeAccount = function(dota2, profile_card_queue, account, next) {
     // make new account with account id
     var accountID = account.charAt(0) === '_' ? account : '_' + account;
     
-    Account.getAccountInfo(function(err, result) {
+    Account.getAccountInfo(account, function(err, result) {
       if (err) throw err;
       logger.info('makeAccount calling done with new Account');
       return next(null, new Account(result, dota2, profile_card_queue));
@@ -74,9 +74,14 @@ Account.getAccountInfo = function(accountID, next) {
   http_request.get(url, function(err, response, body) {
     if (err) throw err;
     
-    var account = JSON.parse(body);
-    logger.info(`Got account info for ${account.username}`);
-    next(null, account);
+    try {
+      var account = JSON.parse(body);
+      logger.info(`Got account info for ${account.username}`);
+      return next(null, account);
+    } catch (error) {
+      return next(error);
+    }
+    
   });
 };
 
@@ -152,6 +157,29 @@ Account.prototype.resolveNewRankedMatch = function(match) {
     dota2: this.dota2,
     accountID: this.accountID,
     success: this.addMatch.bind(this, match)
+  });
+};
+
+Account.prototype.getSoloMMR = function(next) {
+  this.getProfileCard(function(profileCard) {
+    var soloMMR = profileCard.slots.reduce(function(acc, card) {
+      console.log(card.stat);
+      if (card.stat && card.stat.stat_id === 1) {
+        return card.stat.stat_score;
+      }
+      return acc;
+    }, -1);
+    
+    return next(null, soloMMR);
+  });
+};
+
+Account.prototype.getProfileCard = function(next) {
+  logger.info(`Getting profile card for ${this.accountID}`);
+  this.profile_card_queue.push({
+    dota2: this.dota2,
+    accountID: this.accountID,
+    success: next
   });
 };
 

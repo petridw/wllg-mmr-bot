@@ -62,4 +62,4 @@ dota2.on('profileCardData', function(accountId, profileCardData) {
   
 });
 
-friendEvents(client);
+friendEvents(client, profile_card_queue, dota2);
