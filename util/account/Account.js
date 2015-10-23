@@ -94,11 +94,16 @@ Account.prototype.getMatchHistory = function(next) {
   http_request.get(url, (err, response, body) => {
     if (err) return next(err);
     
-    var matches = JSON.parse(body).result.matches;
-    
-    this.resolveMatches(matches);
-    
-    return next(null, matches);
+    try {
+      var matches = JSON.parse(body).result.matches;
+      
+      this.resolveMatches(matches);
+      
+      return next(null, matches);
+       
+    } catch (error) {
+      return next(error);
+    }
     
   });
 };
@@ -125,7 +130,7 @@ Account.prototype.resolveMatches = function(matches) {
   }, this);
   
   if (rankedMatches.length > 1) {
-    logger.error(`More than 1 new ranked matches. MMR changes will need to be
+    logger.info(`More than 1 new ranked matches. MMR changes will need to be
                   manually reconciled. See missedMatches.json`);
                   
     fs.readFile(__dirname + '/../../missedMatches.json', (err, missedMatches) => {
@@ -135,7 +140,7 @@ Account.prototype.resolveMatches = function(matches) {
         missedMatches[match.id] = match;
       });
 
-      fs.writeFile(__dirname + '/../../missedMatches.json', JSON.stringify(missedMatches), function (err) {
+      fs.writeFile(__dirname + '/../../missedMatches.json', JSON.stringify(missedMatches, null, 2), function (err) {
         if (err) throw new Error(err);        
       });
     });
@@ -209,7 +214,7 @@ Account.prototype.addMatch = function(match, profileCard) {
     fs.readFile(__dirname + '/../../missedMatches.json', function (err, missedMatches) {
       var loggedMatches = JSON.parse(missedMatches);
       loggedMatches[match.matchID] = match;
-      fs.writeFile(__dirname + '/../../waitingForMMR.json', JSON.stringify(loggedMatches), function (err) {
+      fs.writeFile(__dirname + '/../../waitingForMMR.json', JSON.stringify(loggedMatches, null, 2), function (err) {
         if (err) throw new Error(err);        
       });
     });
