@@ -191,7 +191,6 @@ Account.prototype.getProfileCard = function(next) {
 Account.prototype.addMatch = function(match, profileCard) {
   
   var soloMMR = profileCard.slots.reduce(function(acc, card) {
-    console.log(card.stat);
     if (card.stat && card.stat.stat_id === 1) {
       return card.stat.stat_score;
     }
