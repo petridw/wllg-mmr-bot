@@ -3,7 +3,5 @@ config
 sentryfile.*
 cratedump.log
 mmr.txt
-servers.json
+*.json
 .jshintrc
-missedMatches.json
-waitingForMMR.json
