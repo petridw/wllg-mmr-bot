@@ -1,6 +1,5 @@
 var config = require('config');
 var http_request = require('request');
-var extend = require('lodash/object/extend');
 var moment = require('moment');
 var async = require('async');
 var Match = require('../match/Match');
@@ -36,11 +35,6 @@ Account.makeAccount = function(dota2, profile_card_queue, account, next) {
   } else {
     return next(null, new Account(account, dota2, profile_card_queue));
   }
-};
-
-Account.prototype.setProps = function(newProps) {
-  if (!newProps) return logger.error('Could not update props, props not provided.');
-  extend(this, newProps);
 };
 
 Account.prototype.update = function(done) {
@@ -158,17 +152,14 @@ Account.prototype.resolveMatches = function(matches) {
 
 Account.prototype.resolveNewRankedMatch = function(match) {
   logger.info(`Pushing match ${match.matchID} to queue for ${this.accountID}`);
-  this.profile_card_queue.push({
-    dota2: this.dota2,
-    accountID: this.accountID,
-    success: this.addMatch.bind(this, match)
+  this.getSoloMMR((err, mmr) => {
+    this.addMatch(match, mmr);
   });
 };
 
 Account.prototype.getSoloMMR = function(next) {
   this.getProfileCard(function(profileCard) {
     var soloMMR = profileCard.slots.reduce(function(acc, card) {
-      console.log(card.stat);
       if (card.stat && card.stat.stat_id === 1) {
         return card.stat.stat_score;
       }
@@ -188,14 +179,7 @@ Account.prototype.getProfileCard = function(next) {
   });
 };
 
-Account.prototype.addMatch = function(match, profileCard) {
-  
-  var soloMMR = profileCard.slots.reduce(function(acc, card) {
-    if (card.stat && card.stat.stat_id === 1) {
-      return card.stat.stat_score;
-    }
-    return acc;
-  }, -1);
+Account.prototype.addMatch = function(match, soloMMR) {
   
   if (soloMMR === -1) {
     logger.error('Could not find solo mmr for ' + this.username);
