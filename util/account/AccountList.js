@@ -53,7 +53,6 @@ AccountList.prototype.updateAccounts = function() {
 AccountList.matchHistory = function(account, next) {  
   account.getMatchHistory(function(err, matches) {
     if (err) return next(err);
-    logger.info('Got matches');
     return next();
   });
 };

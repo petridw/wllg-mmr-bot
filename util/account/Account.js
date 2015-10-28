@@ -124,8 +124,6 @@ Account.prototype.resolveMatches = function(matches) {
   }, this);
   
   if (rankedMatches.length > 1) {
-    logger.info(`More than 1 new ranked matches. MMR changes will need to be
-                  manually reconciled. See missedMatches.json`);
                   
     fs.readFile(__dirname + '/../../missedMatches.json', (err, missedMatches) => {
       missedMatches = JSON.parse(missedMatches);
@@ -141,12 +139,12 @@ Account.prototype.resolveMatches = function(matches) {
   }
   
   if (rankedMatches.length > 0) {
+    logger.info(`Found ${newMatches.length} new matches and ${rankedMatches.length} ` +
+                `new ranked matches for ${this.username}`);
+    
     newRankedMatch = rankedMatches[0];
     this.resolveNewRankedMatch(newRankedMatch);
   }
-  
-  logger.info(`Found ${newMatches.length} new matches and ${rankedMatches.length} ` +
-              `new ranked matches for ${this.username}`);
   
 };
 
@@ -171,7 +169,6 @@ Account.prototype.getSoloMMR = function(next) {
 };
 
 Account.prototype.getProfileCard = function(next) {
-  logger.info(`Getting profile card for ${this.accountID}`);
   this.profile_card_queue.push({
     dota2: this.dota2,
     accountID: this.accountID,
@@ -193,7 +190,7 @@ Account.prototype.addMatch = function(match, soloMMR) {
     logger.info(`${this.username} was ${this.currentMMR} before and is now ${soloMMR}`);
       
   if (!mmrChange) {
-    logger.info('Ranked match found but no MMR change. Match will need to be manually resolved later.');
+    logger.info('Ranked match found but no MMR change - have to retry later.');
     fs.readFile(__dirname + '/../../missedMatches.json', function (err, missedMatches) {
       var loggedMatches = JSON.parse(missedMatches);
       loggedMatches[match.matchID] = match;

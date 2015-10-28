@@ -79,7 +79,6 @@ Match.getMatchInfo = function(matchID, next) {
     if (err) throw err;
     
     var match = JSON.parse(body).result;
-    logger.info('Got match info.');
     
     next(null, match);
   });
